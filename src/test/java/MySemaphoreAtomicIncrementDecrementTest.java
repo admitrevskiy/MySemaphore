@@ -1,4 +1,8 @@
 import org.junit.*;
+import semaphore.MySemaphore;
+import semaphore.MySemaphoreImpl;
+import threads.concurrent.AtomicDecrementThread;
+import threads.concurrent.AtomicIncrementThread;
 
 import java.util.concurrent.atomic.AtomicInteger;
 

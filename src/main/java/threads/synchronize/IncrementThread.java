@@ -1,13 +1,17 @@
+package threads.synchronize;
+
+import semaphore.MySemaphore;
+
 /**
  * Created by Leshka on 22.02.18.
  */
 public class IncrementThread implements Runnable {
 
-    private MySemaphoreImpl semaphore;
+    private MySemaphore semaphore;
     private int count;
     private int timeout;
 
-    public IncrementThread(MySemaphoreImpl semaphore, int count, int timeout) {
+    public IncrementThread(MySemaphore semaphore, int count, int timeout) {
         this.semaphore = semaphore;
         this.count = count;
         this.timeout = timeout;

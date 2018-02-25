@@ -1,12 +1,18 @@
+package threads.synchronize;
+
+
+import semaphore.MySemaphore;
+
 /**
  * Created by Leshka on 22.02.18.
  */
 public class DecrementThread implements Runnable {
-    MySemaphoreImpl semaphore;
-    String name;
-    int count;
 
-    public DecrementThread(MySemaphoreImpl semaphore, String name, int count) {
+    private MySemaphore semaphore;
+    private String name;
+    private int count;
+
+    public DecrementThread(MySemaphore semaphore, String name, int count) {
         this.semaphore = semaphore;
         this.name = name;
         this.count = count;

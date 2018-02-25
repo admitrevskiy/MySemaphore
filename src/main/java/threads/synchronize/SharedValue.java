@@ -1,3 +1,5 @@
+package threads.synchronize;
+
 /**
  * Created by Leshka on 22.02.18.
  */

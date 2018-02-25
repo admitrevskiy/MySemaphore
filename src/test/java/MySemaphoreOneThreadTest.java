@@ -1,4 +1,6 @@
 import org.junit.*;
+import semaphore.MySemaphoreImpl;
+import threads.synchronize.IncrementThread;
 
 import static org.junit.Assert.*;
 

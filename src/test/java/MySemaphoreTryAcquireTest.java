@@ -1,4 +1,6 @@
 import org.junit.*;
+import semaphore.MySemaphore;
+import semaphore.MySemaphoreImpl;
 
 import static org.junit.Assert.*;
 

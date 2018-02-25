@@ -1,3 +1,5 @@
+package semaphore;
+
 /**
  * Created by Leshka on 24.02.18.
  */

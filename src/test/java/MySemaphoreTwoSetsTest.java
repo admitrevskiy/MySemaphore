@@ -1,4 +1,7 @@
 import org.junit.*;
+import semaphore.MySemaphore;
+import semaphore.MySemaphoreImpl;
+import threads.concurrent.ProducerFinishThread;
 
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -53,7 +56,7 @@ public class MySemaphoreTwoSetsTest {
 
     /**
      * We're launching three threads.
-     * After 50ms trying to launch two more threads,if semaphore works correctly only first three threads gets into it.
+     * After 50ms trying to launch two more threads, if semaphore works correctly only first three threads should gets into it.
      * After 20ms trying to get CopyOnWriteCollection size.
      * Each thread increases size by 1.
      * Therefore, if the semaphore is working correctly and only three threads get inside, the set size should equals 3 and finishSet size should equals zero;

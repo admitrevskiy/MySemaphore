@@ -1,7 +1,9 @@
 import org.junit.*;
+import semaphore.MySemaphore;
+import semaphore.MySemaphoreImpl;
+import threads.concurrent.ProducerThread;
 
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
 
