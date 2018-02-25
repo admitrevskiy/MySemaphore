@@ -3,33 +3,27 @@
  */
 public class IncrementThread implements Runnable {
 
-    MySemaphore semaphore;
-    String name;
-    int count;
+    private MySemaphoreImpl semaphore;
+    private int count;
+    private int timeout;
 
-    public String getName() {
-        return name;
-    }
-
-    public IncrementThread(MySemaphore semaphore, String name, int count) {
-
+    public IncrementThread(MySemaphoreImpl semaphore, int count, int timeout) {
         this.semaphore = semaphore;
-        this.name = name;
         this.count = count;
-        System.out.println(name + " was created");
+        this.timeout = timeout;
     }
 
     @Override
-    public void run() {
+    public synchronized void run() {
         System.out.println(Thread.currentThread().getName() + " is waiting for permit");
 
         try {
             semaphore.acquire();
                 System.out.println(Thread.currentThread().getName() + " is got for permit");
                 for (int i=0; i<count; i++) {
-                    SharedValue.count++;
-                    System.out.println(Thread.currentThread().getName() + " : value = " + SharedValue.count);
-                    //Thread.sleep(100);
+                    SharedValue.incrementCount();
+                    System.out.println(Thread.currentThread().getName() + " : value = " + SharedValue.getCount());
+                    Thread.sleep(timeout);
 
             }
         } catch (InterruptedException e) {
