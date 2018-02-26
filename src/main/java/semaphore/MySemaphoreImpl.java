@@ -9,6 +9,7 @@ public class MySemaphoreImpl implements MySemaphore {
      * that are specified in constructor
      */
     private volatile int permits;
+    private final Object lock = new Object();
 
     public MySemaphoreImpl(int permits) {
         this.permits = permits;
@@ -22,16 +23,18 @@ public class MySemaphoreImpl implements MySemaphore {
      * @throws InterruptedException
      */
     @Override
-    public synchronized void acquire() throws InterruptedException {
-        System.out.println("Before acquire(): Available permits: " + permits);
-        if (permits > 0) {
-            permits--;
-            System.out.println("After acquire(): Available permits: " + permits);
-        }
+    public void acquire() throws InterruptedException {
+        synchronized (lock) {
+            System.out.println("Before acquire(): Available permits: " + permits);
+            if (permits > 0) {
+                permits--;
+                System.out.println("After acquire(): Available permits: " + permits);
+            }
 
-        else {
-            this.wait();
-            System.out.println("No available permits");
+            else {
+                lock.wait();
+                System.out.println("No available permits");
+            }
         }
     }
 
@@ -40,18 +43,18 @@ public class MySemaphoreImpl implements MySemaphore {
      * A random thread wakes up if there are available permissions;
      */
     @Override
-    public synchronized void release() {
+    public void release() {
+        synchronized (lock) {
+            System.out.println("Before release(): Available permits: " + permits);
 
-        System.out.println("Before release(): Available permits: " + permits);
+            permits++;
 
-        permits++;
-
-        if (permits > 0) {
-            this.notify();
+            lock.notify();
             System.out.println("release() method calls notify()");
-        }
 
-        System.out.println("After release(): Available permits: " + permits);
+
+            System.out.println("After release(): Available permits: " + permits);
+        }
     }
 
     /**
@@ -60,11 +63,12 @@ public class MySemaphoreImpl implements MySemaphore {
      */
     @Override
     public boolean tryAcquire() {
+        synchronized (lock) {
+            if (permits > 0) {
+                return true;
+            }
 
-        if (permits > 0) {
-            return true;
+            return false;
         }
-
-        return false;
     }
 }
