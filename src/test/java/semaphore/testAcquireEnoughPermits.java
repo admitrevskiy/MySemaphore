@@ -86,8 +86,8 @@ public class testAcquireEnoughPermits {
         try {
             thirdThread.join();
             secondThread.join();
-            firstThread.join();
-            firstThread.join();
+            thirdThread.join();
+            fourthThread.join();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
