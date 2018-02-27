@@ -1,9 +1,6 @@
 package semaphore;
 
-import common.PermitsInvader;
-import common.StoppableThread;
-import common.StoppableThreadWithResult;
-import common.TestAtomicThread;
+import testers.*;
 import org.junit.*;
 
 
@@ -14,25 +11,26 @@ import static org.junit.Assert.*;
 /**
  * Created by Leshka on 26.02.18.
  */
-public class SemaphoreTryAcquireTest {
+public class SemaphoreTest {
 
-    private PermitsInvader invaderForTwoPermits, invaderForOnePermit;
+    private PermitsInvader invaderForTwoPermits;
     private StoppableThread threadForTwoPermitsTest;
     private StoppableThreadWithResult threadForTwoPermitsResultTest;
     private AtomicInteger result;
     private MySemaphore semTwoPermits, semOnePermit, semNoPermits;
-    private TestAtomicThread threadForTestWithTimeout;
+    private TestThreadWithTimeoutAndResult threadForTestWithTimeoutAndResult;
+    private TestThreadWithTimeout threadForTestWithTimeout;
     private AtomicInteger startInt, stopInt;
 
 
     @BeforeClass
     public static void beforeClass() {
-        System.out.println("Before SemaphoreTryAcquireTest.class");
+        System.out.println("Before SemaphoreTest.class");
     }
 
     @AfterClass
     public static void afterClass() {
-        System.out.println("After SemaphoreTryAcquireTest.class");
+        System.out.println("After SemaphoreTest.class");
     }
 
     @Before
@@ -46,8 +44,9 @@ public class SemaphoreTryAcquireTest {
         result = new AtomicInteger(0);
 
         invaderForTwoPermits = new PermitsInvader(semTwoPermits);
-        invaderForOnePermit = new PermitsInvader(semOnePermit);
 
+        threadForTestWithTimeout = new TestThreadWithTimeout(semTwoPermits, 1000);
+        threadForTestWithTimeoutAndResult = new TestThreadWithTimeoutAndResult(semNoPermits, 1000, startInt, stopInt);
 
         threadForTwoPermitsTest = new StoppableThread(semTwoPermits);
         threadForTwoPermitsResultTest = new StoppableThreadWithResult(semTwoPermits, result);
@@ -62,7 +61,10 @@ public class SemaphoreTryAcquireTest {
         startInt = null;
         result = null;
         invaderForTwoPermits = null;
-        invaderForOnePermit = null;
+        threadForTestWithTimeout = null;
+        threadForTestWithTimeoutAndResult = null;
+        threadForTwoPermitsResultTest = null;
+        threadForTwoPermitsTest = null;
 
     }
 
@@ -75,8 +77,6 @@ public class SemaphoreTryAcquireTest {
      */
     @Test
     public void testTryAcquireFourThreadsTwoPermits() throws InterruptedException {
-
-        threadForTestWithTimeout = new TestAtomicThread(semTwoPermits, 1000, startInt, stopInt);
 
         Thread firstThread = new Thread(threadForTestWithTimeout, "firstThread");
         Thread secondThread = new Thread(threadForTestWithTimeout, "secondThread");
@@ -96,11 +96,7 @@ public class SemaphoreTryAcquireTest {
             secondThread.join();
 
             assertFalse(semTwoPermits.tryAcquire());
-        } catch (InterruptedException e){
-            e.printStackTrace();
-        }
 
-        try {
             thirdThread.join(1000);
             fourthThread.join(1000);
             assertTrue(semTwoPermits.tryAcquire());
@@ -121,10 +117,9 @@ public class SemaphoreTryAcquireTest {
      */
     @Test
     public void testTryAcquireTwoThreadsNoPermitsWithReleaseAndResult()  {
-        threadForTestWithTimeout = new TestAtomicThread(semNoPermits, 1000, startInt, stopInt);
 
-        Thread firstThread = new Thread(threadForTestWithTimeout, "firstThread");
-        Thread secondThread = new Thread(threadForTestWithTimeout, "secondThread");
+        Thread firstThread = new Thread(threadForTestWithTimeoutAndResult, "firstThread");
+        Thread secondThread = new Thread(threadForTestWithTimeoutAndResult, "secondThread");
 
         firstThread.start();
         secondThread.start();
@@ -146,7 +141,6 @@ public class SemaphoreTryAcquireTest {
             assertTrue(semNoPermits.tryAcquire());
             assertEquals(2, stopInt.get());
             assertEquals(2, startInt.get());
-
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -222,11 +216,8 @@ public class SemaphoreTryAcquireTest {
 
             assertTrue(semTwoPermits.tryAcquire());
             assertEquals(2, result.get());
-
-
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
-
 }

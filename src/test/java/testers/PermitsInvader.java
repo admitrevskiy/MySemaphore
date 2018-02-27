@@ -1,4 +1,4 @@
-package common;
+package testers;
 
 import semaphore.MySemaphore;
 
