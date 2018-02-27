@@ -1,26 +1,23 @@
-package threads.concurrent;
+package common;
 
 import semaphore.MySemaphore;
 
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Leshka on 26.02.18.
  */
-public class ProducerThread implements Runnable {
+public class TestAtomicThread implements Runnable {
 
     private MySemaphore semaphore;
-    private CopyOnWriteArraySet<Integer> set;
-    private int value;
     private int timeout;
+    private AtomicInteger startInt, stopInt;
 
-
-    public ProducerThread(MySemaphore semaphore, CopyOnWriteArraySet<Integer> set, int value, int timeout) {
+    public TestAtomicThread(MySemaphore semaphore, int timeout, AtomicInteger startInt, AtomicInteger stopInt) {
         this.semaphore = semaphore;
-        this.set = set;
-        this.value = value;
         this.timeout = timeout;
+        this.startInt = startInt;
+        this.stopInt = stopInt;
     }
 
     @Override
@@ -30,15 +27,16 @@ public class ProducerThread implements Runnable {
         try {
             semaphore.acquire();
             System.out.println(Thread.currentThread().getName() + " is got for permit");
-            set.add(value);
-            System.out.println(Thread.currentThread().getName() + ": puts value: " + value);
+            startInt.getAndAdd(1);
             Thread.sleep(timeout);
-
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
-        System.out.println(Thread.currentThread().getName() + " has released permit");
+        stopInt.getAndAdd(1);
+        System.out.println(Thread.currentThread().getName() + " release permit");
         semaphore.release();
+
+
     }
 }

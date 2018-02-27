@@ -32,6 +32,7 @@ public class MySemaphoreImpl implements MySemaphore {
             }
 
             else {
+                permits--;
                 lock.wait();
                 System.out.println("No available permits");
             }
