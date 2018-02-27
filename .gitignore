@@ -2,8 +2,12 @@
 .gradle/
 build/
 gradle/
+
 build.gradle
 gradlew
 gradlew.bat
 settings.gradle
+
 *.class
+*.iml
+
