@@ -4,6 +4,10 @@ import testers.*;
 import org.junit.*;
 
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
@@ -11,7 +15,7 @@ import static org.junit.Assert.*;
 /**
  * Created by Leshka on 26.02.18.
  */
-public class SemaphoreTest {
+public class SemaphoreIndirectTest {
 
     private PermitsInvader invaderForTwoPermits;
     private StoppableThread threadForTwoPermitsTest;
@@ -25,16 +29,17 @@ public class SemaphoreTest {
 
     @BeforeClass
     public static void beforeClass() {
-        System.out.println("Before SemaphoreTest.class");
+        System.out.println("Before SemaphoreIndirectTest.class");
     }
 
     @AfterClass
     public static void afterClass() {
-        System.out.println("After SemaphoreTest.class");
+        System.out.println("After SemaphoreIndirectTest.class");
     }
 
     @Before
     public void setUp() {
+
         semTwoPermits = new MySemaphoreImpl(2);
         semOnePermit = new MySemaphoreImpl(1);
         semNoPermits = new MySemaphoreImpl(0);
@@ -152,28 +157,25 @@ public class SemaphoreTest {
      * Report runnable object threadForTwoPermitsTest, that it's time to stop waiting cycle, wait for the end of the threads working and checkout available permits
      */
     @Test
-    public void testAcquireEnoughPermits() {
+    public void testAcquireEnoughPermits() throws InterruptedException {
         Thread firstThread = new Thread(threadForTwoPermitsTest, "FirstThread");
         Thread secondThread = new Thread(threadForTwoPermitsTest, "SecondThread");
 
         firstThread.start();
         secondThread.start();
 
-        try {
-            firstThread.join(1000);
-            secondThread.join(1000);
+        firstThread.join(1000);
+        secondThread.join(1000);
 
-            assertFalse(semTwoPermits.tryAcquire());
+        assertFalse(semTwoPermits.tryAcquire());
 
-            threadForTwoPermitsTest.setStopped(true);
+        threadForTwoPermitsTest.setStopped(true);
 
-            firstThread.join();
-            secondThread.join();
+        firstThread.join();
+        secondThread.join();
 
-            assertTrue(semTwoPermits.tryAcquire());
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        assertTrue(semTwoPermits.tryAcquire());
+
     }
 
     /**
@@ -220,4 +222,5 @@ public class SemaphoreTest {
             e.printStackTrace();
         }
     }
+
 }
