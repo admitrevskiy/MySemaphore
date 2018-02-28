@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
@@ -44,7 +43,7 @@ public class SemaphoreDirectTest {
                 //Acquiring; Before each acquire boolean tryAcquire is added to results;
                 results.add(semaphore.tryAcquire());
                 try {
-                    semaphore.acquire();
+                     semaphore.acquire();
                     doneAcquireSignal.countDown();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -172,6 +171,8 @@ public class SemaphoreDirectTest {
     }
 
     /**
+     * Semaphore with 0 permissions simulate full semaphore.
+     * releasingRunnable simulates thread that stops it work.
      * I use CopyOnWriteArrayList ints to check the correctness of the acquire() method.
      * First thread records beforeValue before it gets locked and afterValue after it gets unlocked.
      * At the next step another thread records blockedValue during first thread is waiting for permit.

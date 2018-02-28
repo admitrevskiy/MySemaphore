@@ -26,16 +26,13 @@ public class MySemaphoreImpl implements MySemaphore {
     public void acquire() throws InterruptedException {
         synchronized (lock) {
             System.out.println("Before acquire(): Available permits: " + permits);
-            if (permits > 0) {
-                permits--;
-                System.out.println("After acquire(): Available permits: " + permits);
-            }
-
-            else {
-                permits--;
-                lock.wait();
+            if (permits <= 0) {
                 System.out.println("No available permits");
+                lock.wait();
             }
+            permits--;
+            System.out.println("After acquire(): Available permits: " + permits);
+
         }
     }
 
