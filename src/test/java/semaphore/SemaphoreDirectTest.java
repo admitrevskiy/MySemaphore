@@ -253,5 +253,122 @@ public class SemaphoreDirectTest {
     }
 
 
+    /**
+     * Semaphore with 1 permissions
+     * acquiringThread gets available permit and waits for releasing signal.
+     * I use CopyOnWriteArrayList ints to check the correctness of the acquire() method.
+     * First thread records beforeValue before it gets permit and afterValue after it calls release().
+     * At the next step another thread records blockedValue during first thread is waiting for releaseSignal and get wait();
+     * First thread get releaseSignal, release permit and recorded afterValue to ints.
+     * Another thread get permit and records finishValue into ints.
+     * Thus, the sequence of records is proof of locking the first stream.
+     * @throws InterruptedException
+     */
+
+    @Test
+    public void testAcquireOnePermit() throws InterruptedException {
+
+        int beforeValue = 1;
+        int blockedValue = 2;
+        int afterValue = 3;
+        int finishValue = 4;
+
+        int permitsCount = 1;
+
+        final MySemaphore semaphore = new MySemaphoreImpl(permitsCount);
+        final CountDownLatch doneAcquireSignal = new CountDownLatch(permitsCount);
+        final CountDownLatch startReleaseSignal = new CountDownLatch(1);
+
+        final List<Boolean> results = new ArrayList<>();
+        final CopyOnWriteArrayList<Integer> ints = new CopyOnWriteArrayList<>();
+
+        Runnable acquiringRunnable = () -> {
+            synchronized (results) {
+
+                // Step 1: Acquiring; Before acquire tryout boolean tryAcquire is added to results;
+                // Moreover, adding  "1" to ints. This should be first value in the List
+                results.add(semaphore.tryAcquire());
+                ints.add(beforeValue);
+                try {
+                    semaphore.acquire();
+                    doneAcquireSignal.countDown();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                try {
+                    assertTrue(startReleaseSignal.await(1, TimeUnit.SECONDS));
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                // Step 2: Release time.
+                // Moreover, adding "3" to ints. This should be the third value in the List
+                synchronized (results) {
+                    ints.add(afterValue);
+                    semaphore.release();
+                    results.add(semaphore.tryAcquire());
+                }
+            }
+        };
+
+        Runnable blockedRunnable = () -> {
+
+            // Step 1: Acquiring; Before acquire tryout boolean tryAcquire is added to results;
+            // Moreover, adding  "1" to ints. This should be first value in the List
+            results.add(semaphore.tryAcquire());
+            try {
+                ints.add(blockedValue);
+                semaphore.acquire();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            // Step 2: Release time.
+            // Moreover, adding "3" to ints. This should be the third value in the List
+            synchronized (results) {
+                ints.add(finishValue);
+                semaphore.release();
+                results.add(semaphore.tryAcquire());
+            }
+
+        };
+
+        // Create acquiring thread that should wait
+        Thread acquiringThread = new Thread(acquiringRunnable);
+        acquiringThread.start();
+
+        // Waiting for acquiring thread to enter the semaphore.
+        doneAcquireSignal.await(1, TimeUnit.SECONDS);
+
+        //Assert that there s no available permits
+        assertFalse(semaphore.tryAcquire());
+
+        //Running thread that should be blocked
+        Thread blockedThread = new Thread(blockedRunnable);
+        blockedThread.start();
+
+        //Time to release for thread that gets permit
+        startReleaseSignal.countDown();
+
+        //Waiting for all threads to finish their job
+        acquiringThread.join();
+        blockedThread.join();
+
+        //Assert that there is available permit after all threads stopped
+        assertTrue(semaphore.tryAcquire());
+
+        // Assert that acquiring thread was first to recorded "1" to the list.
+        // Then blocked thread recorded "2" to the list before tryout to get permit.
+        // Acquiring thread recorded "3" after release.
+        // Blocked thread recorded "4" after acquiring thread calls notify();
+        assertEquals(4, ints.size());
+        assertTrue(ints.get(0)==beforeValue);
+        assertTrue(ints.get(1)==blockedValue);
+        assertTrue(ints.get(2)==afterValue);
+        assertTrue(ints.get(3)==finishValue);
+
+        System.out.println(ints);
+    }
 }
 

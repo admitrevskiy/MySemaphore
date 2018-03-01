@@ -62,11 +62,15 @@ public class MySemaphoreImpl implements MySemaphore {
     @Override
     public boolean tryAcquire() {
         synchronized (lock) {
-            if (permits > 0) {
-                return true;
+            if (permits <=0) {
+                return false;
             }
-
-            return false;
+            try {
+                permits--;
+                return true;
+            } finally {
+                permits++;
+            }
         }
     }
 }
