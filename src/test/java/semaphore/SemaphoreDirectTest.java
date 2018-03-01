@@ -277,10 +277,11 @@ public class SemaphoreDirectTest {
 
         final MySemaphore semaphore = new MySemaphoreImpl(permitsCount);
         final CountDownLatch doneAcquireSignal = new CountDownLatch(permitsCount);
+        final CountDownLatch doneBlockSignal = new CountDownLatch(permitsCount);
         final CountDownLatch startReleaseSignal = new CountDownLatch(1);
 
         final List<Boolean> results = new ArrayList<>();
-        final CopyOnWriteArrayList<Integer> ints = new CopyOnWriteArrayList<>();
+        final CopyOnWriteArrayList<Integer> enters = new CopyOnWriteArrayList<>();
 
         Runnable acquiringRunnable = () -> {
             synchronized (results) {
@@ -288,13 +289,15 @@ public class SemaphoreDirectTest {
                 // Step 1: Acquiring; Before acquire tryout boolean tryAcquire is added to results;
                 // Moreover, adding  "1" to ints. This should be first value in the List
                 results.add(semaphore.tryAcquire());
-                ints.add(beforeValue);
+                enters.add(beforeValue);
+                System.out.println(enters);
                 try {
                     semaphore.acquire();
-                    doneAcquireSignal.countDown();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+
+                doneAcquireSignal.countDown();
 
                 try {
                     assertTrue(startReleaseSignal.await(1, TimeUnit.SECONDS));
@@ -305,9 +308,10 @@ public class SemaphoreDirectTest {
                 // Step 2: Release time.
                 // Moreover, adding "3" to ints. This should be the third value in the List
                 synchronized (results) {
-                    ints.add(afterValue);
                     semaphore.release();
+                    enters.add(afterValue);
                     results.add(semaphore.tryAcquire());
+                    System.out.println(enters);
                 }
             }
         };
@@ -317,8 +321,10 @@ public class SemaphoreDirectTest {
             // Step 1: Acquiring; Before acquire tryout boolean tryAcquire is added to results;
             // Moreover, adding  "1" to ints. This should be first value in the List
             results.add(semaphore.tryAcquire());
+            enters.add(blockedValue);
+            System.out.println(enters);
+            doneBlockSignal.countDown();
             try {
-                ints.add(blockedValue);
                 semaphore.acquire();
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -327,9 +333,10 @@ public class SemaphoreDirectTest {
             // Step 2: Release time.
             // Moreover, adding "3" to ints. This should be the third value in the List
             synchronized (results) {
-                ints.add(finishValue);
+                enters.add(finishValue);
                 semaphore.release();
                 results.add(semaphore.tryAcquire());
+                System.out.println(enters);
             }
 
         };
@@ -339,14 +346,17 @@ public class SemaphoreDirectTest {
         acquiringThread.start();
 
         // Waiting for acquiring thread to enter the semaphore.
-        doneAcquireSignal.await(1, TimeUnit.SECONDS);
+        assertTrue(doneAcquireSignal.await(1, TimeUnit.SECONDS));
 
-        //Assert that there s no available permits
+        //Assert that there is no available permits
         assertFalse(semaphore.tryAcquire());
 
         //Running thread that should be blocked
         Thread blockedThread = new Thread(blockedRunnable);
         blockedThread.start();
+
+
+        assertTrue(doneBlockSignal.await(1,TimeUnit.SECONDS));
 
         //Time to release for thread that gets permit
         startReleaseSignal.countDown();
@@ -362,13 +372,13 @@ public class SemaphoreDirectTest {
         // Then blocked thread recorded "2" to the list before tryout to get permit.
         // Acquiring thread recorded "3" after release.
         // Blocked thread recorded "4" after acquiring thread calls notify();
-        assertEquals(4, ints.size());
-        assertTrue(ints.get(0)==beforeValue);
-        assertTrue(ints.get(1)==blockedValue);
-        assertTrue(ints.get(2)==afterValue);
-        assertTrue(ints.get(3)==finishValue);
+        assertEquals(4, enters.size());
+        assertTrue(enters.get(0)==beforeValue);
+        assertTrue(enters.get(1)==blockedValue);
+        assertTrue(enters.get(2)==afterValue);
+        assertTrue(enters.get(3)==finishValue);
 
-        System.out.println(ints);
+        System.out.println(enters);
     }
 }
 
