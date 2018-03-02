@@ -4,9 +4,7 @@ import org.junit.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -252,6 +250,92 @@ public class SemaphoreDirectTest {
         System.out.println(ints);
     }
 
+    /**
+     * The same logic with callable
+     * @throws InterruptedException
+     */
+    @Test
+    public void testCallableAcquireNoPermits() throws InterruptedException {
+
+        int beforeValue = 1;
+        int blockedValue = 2;
+        int afterValue = 3;
+
+        int permitsCount = 0;
+
+        final MySemaphore semaphore = new MySemaphoreImpl(permitsCount);
+        final CountDownLatch doneAcquireSignal = new CountDownLatch(1);
+        final ScheduledExecutorService es = Executors.newScheduledThreadPool(2);
+
+        final List<Boolean> results = new ArrayList<>();
+        final CopyOnWriteArrayList<Integer> ints = new CopyOnWriteArrayList<>();
+
+        Callable<Boolean> acquiringCallable = () -> {
+            synchronized (results) {
+                // Step 1: Acquiring; Before acquire tryout boolean tryAcquire is added to results;
+                // Moreover, adding  "1" to ints. This should be first value in the List
+                results.add(semaphore.tryAcquire());
+                System.out.println("The acquiring thread is going to sleep");
+                ints.add(beforeValue);
+                doneAcquireSignal.countDown();
+                semaphore.acquire();
+            }
+
+
+            // Step 2: Release time.
+            // Moreover, adding "3" to ints. This should be the third value in the List
+            synchronized (results) {
+                System.out.println("The acquiring thread wakes up");
+                results.add(semaphore.tryAcquire());
+                ints.add(afterValue);
+                semaphore.release();
+
+
+            }
+            return true;
+        };
+
+        Callable<Boolean> releasingCallable = () -> {
+
+            // We release one permit from semaphore
+            // Moreover, adding "2" to ints. This should be the second value in the List
+            System.out.println("The releasing thread is going to give a permit");
+            ints.add(blockedValue);
+            semaphore.release();
+
+            return true;
+
+        };
+
+        Future<Boolean> acquiringFuture = es.submit(acquiringCallable);
+
+        // Waiting for acquiring thread to enter the semaphore.
+        assertTrue(doneAcquireSignal.await(1, TimeUnit.SECONDS));
+
+        ScheduledFuture<Boolean> releasingFuture = es.schedule(releasingCallable, 100, TimeUnit.MILLISECONDS);
+
+        while (!acquiringFuture.isDone() && !releasingFuture.isDone()) {
+            System.out.println("Waiting");
+        }
+
+        // Assert that tryAcquire() was not successful
+        assertEquals(2, results.size());
+        assertFalse(results.get(0));
+        assertFalse(results.get(1));
+
+        // Assert that acquiring thread was first to recorded "1" to the list.
+        // Then releasing thread recorded "2" to the list
+        // Acquiring thread recorded "3" finally
+        assertEquals(3, ints.size());
+        assertTrue(ints.get(0)==beforeValue);
+        assertTrue(ints.get(1)==blockedValue);
+        assertTrue(ints.get(2)==afterValue);
+
+        System.out.println(ints);
+
+        es.shutdown();
+    }
+
 
     /**
      * Semaphore with 1 permissions
@@ -282,6 +366,56 @@ public class SemaphoreDirectTest {
 
         final List<Boolean> results = new ArrayList<>();
         final CopyOnWriteArrayList<Integer> enters = new CopyOnWriteArrayList<>();
+
+        Callable<Boolean> acquiringCallable = new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                // Step 1: Acquiring; Before acquire tryout boolean tryAcquire is added to results;
+                // Moreover, adding  "1" to ints. This should be first value in the List
+                results.add(semaphore.tryAcquire());
+                enters.add(beforeValue);
+                System.out.println(enters);
+                semaphore.acquire();
+
+                doneAcquireSignal.countDown();
+
+                assertTrue(startReleaseSignal.await(1, TimeUnit.SECONDS));
+
+
+                // Step 2: Release time.
+                // Moreover, adding "3" to ints. This should be the third value in the List
+                synchronized (results) {
+                    semaphore.release();
+                    enters.add(afterValue);
+                    results.add(semaphore.tryAcquire());
+                    System.out.println(enters);
+                }
+                return true;
+            }
+        };
+
+        Callable<Boolean> blockedCallable = new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                // Step 1: Acquiring; Before acquire tryout boolean tryAcquire is added to results;
+                // Moreover, adding  "1" to ints. This should be first value in the List
+                results.add(semaphore.tryAcquire());
+                enters.add(blockedValue);
+                System.out.println(enters);
+                doneBlockSignal.countDown();
+                semaphore.acquire();
+
+                // Step 2: Release time.
+                // Moreover, adding "3" to ints. This should be the third value in the List
+                synchronized (results) {
+                    enters.add(finishValue);
+                    semaphore.release();
+                    results.add(semaphore.tryAcquire());
+                    System.out.println(enters);
+                }
+                return true;
+            }
+        };
 
         Runnable acquiringRunnable = () -> {
             synchronized (results) {
@@ -341,6 +475,7 @@ public class SemaphoreDirectTest {
 
         };
 
+
         // Create acquiring thread that should wait
         Thread acquiringThread = new Thread(acquiringRunnable);
         acquiringThread.start();
@@ -379,6 +514,123 @@ public class SemaphoreDirectTest {
         assertTrue(enters.get(3)==finishValue);
 
         System.out.println(enters);
+    }
+
+
+    /**
+     * The same test but using callable!
+     * @throws InterruptedException
+     * @throws ExecutionException
+     */
+    @Test
+    public void testCallableAcquireOnePermit() throws InterruptedException, ExecutionException {
+
+        int beforeValue = 1;
+        int blockedValue = 2;
+        int afterValue = 3;
+        int finishValue = 4;
+
+        int permitsCount = 1;
+
+        final MySemaphore semaphore = new MySemaphoreImpl(permitsCount);
+        final CountDownLatch doneAcquireSignal = new CountDownLatch(permitsCount);
+        final CountDownLatch doneBlockSignal = new CountDownLatch(permitsCount);
+        final CountDownLatch startReleaseSignal = new CountDownLatch(1);
+        final ExecutorService es = Executors.newFixedThreadPool(2);
+
+        final List<Boolean> results = new ArrayList<>();
+        final CopyOnWriteArrayList<Integer> enters = new CopyOnWriteArrayList<>();
+
+        Callable<Boolean> acquiringCallable = new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                // Step 1: Acquiring; Before acquire tryout boolean tryAcquire is added to results;
+                // Moreover, adding  "1" to ints. This should be first value in the List
+
+                results.add(semaphore.tryAcquire());
+                enters.add(beforeValue);
+                semaphore.acquire();
+                doneAcquireSignal.countDown();
+
+                assertTrue(startReleaseSignal.await(1, TimeUnit.SECONDS));
+
+                // Step 2: Release time.
+                // Moreover, adding "3" to ints. This should be the third value in the List
+                synchronized (enters) {
+                    semaphore.release();
+                    enters.add(afterValue);
+                    results.add(semaphore.tryAcquire());
+                    System.out.println(enters);
+                }
+                return true;
+            }
+        };
+
+        Callable<Boolean> blockedCallable = new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                // Step 1: Acquiring; Before acquire tryout boolean tryAcquire is added to results;
+                // Moreover, adding  "1" to ints. This should be first value in the List
+                results.add(semaphore.tryAcquire());
+                enters.add(blockedValue);
+                System.out.println(enters);
+
+                doneBlockSignal.countDown();
+                semaphore.acquire();
+
+                // Step 2: Release time.
+                // Moreover, adding "3" to ints. This should be the third value in the List
+                synchronized (enters) {
+                    enters.add(finishValue);
+                    semaphore.release();
+                    results.add(semaphore.tryAcquire());
+                    System.out.println(enters);
+                }
+                return true;
+            }
+        };
+
+        Future<Boolean> acquiringFuture = es.submit(acquiringCallable);
+
+        // Waiting for acquiring thread to enter the semaphore.
+        assertTrue(doneAcquireSignal.await(1, TimeUnit.SECONDS));
+
+        //Assert that there is no available permits
+        assertFalse(semaphore.tryAcquire());
+
+        Future<Boolean> blockedFuture = es.submit(blockedCallable);
+
+        // Waiting for acquiring thread to tryout enter the semaphore.
+        assertTrue(doneBlockSignal.await(1,TimeUnit.SECONDS));
+
+        //Time to release for thread that gets permit
+        startReleaseSignal.countDown();
+
+        //Assert that there is no available permits until threads complete their work
+        while(!acquiringFuture.isDone() && !blockedFuture.isDone()) {
+            System.out.println("wait for all threads");
+        }
+
+        //Both call() returns true =)
+        assertTrue(acquiringFuture.get());
+        assertTrue(blockedFuture.get());
+
+        //Assert that there is available permit after all threads stopped
+        assertTrue(semaphore.tryAcquire());
+
+        // Assert that acquiring thread was first to recorded "1" to the list.
+        // Then blocked thread recorded "2" to the list before tryout to get permit.
+        // Acquiring thread recorded "3" after release.
+        // Blocked thread recorded "4" after acquiring thread calls notify();
+        assertEquals(4, enters.size());
+        assertTrue(enters.get(0)==beforeValue);
+        assertTrue(enters.get(1)==blockedValue);
+        assertTrue(enters.get(2)==afterValue);
+        assertTrue(enters.get(3)==finishValue);
+
+        System.out.println(enters);
+
+        es.shutdown();
     }
 }
 
