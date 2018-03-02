@@ -175,6 +175,10 @@ public class SemaphoreDirectTest {
      * First thread records beforeValue before it gets locked and afterValue after it gets unlocked.
      * At the next step another thread records blockedValue during first thread is waiting for permit.
      * Thus, the sequence of records is proof of locking the first stream.
+     *
+     * It's BAD test 'cause Runnable CAN NOT throw InterruptedException
+     * Look at the next one, it use Callable.
+     *
      * @throws InterruptedException
      */
 
@@ -346,6 +350,10 @@ public class SemaphoreDirectTest {
      * First thread get releaseSignal, release permit and recorded afterValue to ints.
      * Another thread get permit and records finishValue into ints.
      * Thus, the sequence of records is proof of locking the first stream.
+     *
+     * * It's BAD test 'cause Runnable CAN NOT throw InterruptedException
+     * Look at the next one, it use Callable.
+     *
      * @throws InterruptedException
      */
 
