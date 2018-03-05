@@ -227,6 +227,11 @@ public class SemaphoreDirectTest {
 
             // We release one permit from semaphore
             // Moreover, adding "2" to ints. This should be the second value in the List
+            try {
+                latch.await(1, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             ints.add(blockedValue);
             semaphore.release();
 
