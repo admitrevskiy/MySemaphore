@@ -555,7 +555,7 @@ public class SemaphoreDirectTest {
                 // Step 1: Acquiring; Before acquire tryout boolean tryAcquire is added to results;
                 // Moreover, adding  "1" to ints. This should be first value in the List
 
-                results.add(semaphore.tryAcquire());
+                //results.add(semaphore.tryAcquire());
                 enters.add(beforeValue);
                 semaphore.acquire();
                 doneAcquireSignal.countDown();
@@ -567,7 +567,7 @@ public class SemaphoreDirectTest {
                 synchronized (enters) {
                     semaphore.release();
                     enters.add(afterValue);
-                    results.add(semaphore.tryAcquire());
+                    //results.add(semaphore.tryAcquire());
                     System.out.println(enters);
                 }
                 return true;
@@ -624,7 +624,7 @@ public class SemaphoreDirectTest {
         assertTrue(blockedFuture.get());
 
         //Assert that there is available permit after all threads stopped
-        assertTrue(semaphore.tryAcquire());
+        //assertTrue(semaphore.tryAcquire());
 
         // Assert that acquiring thread was first to recorded "1" to the list.
         // Then blocked thread recorded "2" to the list before tryout to get permit.
@@ -639,6 +639,13 @@ public class SemaphoreDirectTest {
         System.out.println(enters);
 
         es.shutdown();
+    }
+
+    @Test
+    public void testClassicSemaphore() {
+        Semaphore semaphore = new Semaphore(1);
+        assertTrue(semaphore.tryAcquire());
+        assertFalse(semaphore.tryAcquire());
     }
 }
 
