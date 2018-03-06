@@ -383,11 +383,10 @@ public class SemaphoreDirectTest {
         final CopyOnWriteArrayList<Integer> enters = new CopyOnWriteArrayList<>();
 
         Runnable acquiringRunnable = () -> {
-            synchronized (results) {
+            synchronized (enters) {
 
-                // Step 1: Acquiring; Before acquire tryout boolean tryAcquire is added to results;
+                // Step 1: Acquiring;
                 // Moreover, adding  "1" to ints. This should be first value in the List
-                results.add(semaphore.tryAcquire());
                 enters.add(beforeValue);
                 System.out.println(enters);
                 try {
@@ -406,10 +405,9 @@ public class SemaphoreDirectTest {
 
                 // Step 2: Release time.
                 // Moreover, adding "3" to ints. This should be the third value in the List
-                synchronized (results) {
+                synchronized (enters) {
                     semaphore.release();
                     enters.add(afterValue);
-                    results.add(semaphore.tryAcquire());
                     System.out.println(enters);
                 }
             }
@@ -418,23 +416,23 @@ public class SemaphoreDirectTest {
         Runnable blockedRunnable = () -> {
 
             // Step 1: Acquiring; Before acquire tryout boolean tryAcquire is added to results;
-            // Moreover, adding  "1" to ints. This should be first value in the List
-            results.add(semaphore.tryAcquire());
-            enters.add(blockedValue);
-            System.out.println(enters);
-            doneBlockSignal.countDown();
-            try {
-                semaphore.acquire();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            // Moreover, adding  "1" to ints. This should be first value in the List;
+            synchronized (results) {
+                enters.add(blockedValue);
+                System.out.println(enters);
+                doneBlockSignal.countDown();
+                try {
+                    semaphore.acquire();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
             }
 
             // Step 2: Release time.
-            // Moreover, adding "3" to ints. This should be the third value in the List
+            // Moreover, adding "4" to ints. This should be the third value in the List
             synchronized (results) {
                 enters.add(finishValue);
                 semaphore.release();
-                results.add(semaphore.tryAcquire());
                 System.out.println(enters);
             }
 
@@ -464,9 +462,6 @@ public class SemaphoreDirectTest {
         //Waiting for all threads to finish their job
         acquiringThread.join();
         blockedThread.join();
-
-        //Assert that there is available permit after all threads stopped
-        assertTrue(semaphore.tryAcquire());
 
         // Assert that acquiring thread was first to recorded "1" to the list.
         // Then blocked thread recorded "2" to the list before tryout to get permit.
