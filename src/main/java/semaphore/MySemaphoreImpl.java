@@ -57,6 +57,7 @@ public class MySemaphoreImpl implements MySemaphore {
 
     /**
      * Return true if number of available permissions greater than zero;
+     * Moreover acquires one permit if it's possible
      * Otherwise return false;
      */
     @Override

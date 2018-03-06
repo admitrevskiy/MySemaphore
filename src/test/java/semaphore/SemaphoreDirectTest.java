@@ -2,6 +2,7 @@ package semaphore;
 
 import org.junit.*;
 
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
@@ -595,6 +596,100 @@ public class SemaphoreDirectTest {
         System.out.println(enters);
 
         es.shutdown();
+    }
+
+    @Test
+    public void testTryAcquireNoPermits() throws InterruptedException {
+
+        final MySemaphore sem = new MySemaphoreImpl(0);
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        Runnable releasingRunnable = () -> {
+            // We release one permit from semaphore
+            sem.release();
+            latch.countDown();
+        };
+
+        //Assert that before start releasingRunnable there is no available permits
+        assertFalse(sem.tryAcquire());
+        new Thread(releasingRunnable).start();
+
+        //Wait for releasingThread to release
+        latch.await(1, TimeUnit.SECONDS);
+
+        //Assert that after release there is one available permit, that should be acquired after first tryAcquire()
+        assertTrue(sem.tryAcquire());
+        assertFalse(sem.tryAcquire());
+    }
+
+    @Test
+    public void testTryAcquireOnePermit() throws InterruptedException {
+
+        final MySemaphore sem = new MySemaphoreImpl(1);
+        final CountDownLatch latch = new CountDownLatch(2);
+
+        Runnable releasingRunnable = () -> {
+            // We release one permit from semaphore
+            sem.release();
+            latch.countDown();
+        };
+
+        //Assert that before start releasingRunnable there is no available permits
+        assertTrue(sem.tryAcquire());
+        assertFalse(sem.tryAcquire());
+
+        new Thread(releasingRunnable).start();
+        new Thread(releasingRunnable).start();
+
+        //Wait for releasingThread to release
+        latch.await(1, TimeUnit.SECONDS);
+
+        //Assert that after release there is one available permit, that should be acquired after first tryAcquire()
+        assertTrue(sem.tryAcquire());
+        assertTrue(sem.tryAcquire());
+    }
+
+    @Test
+    public void testTryAcquireTwoPermitsWithAcquire() throws InterruptedException {
+
+        final MySemaphore sem = new MySemaphoreImpl(2);
+        final CountDownLatch acquireDoneSignal = new CountDownLatch(2);
+        final CountDownLatch releaseStartSignal = new CountDownLatch(1);
+        final CountDownLatch releaseStopSignal = new CountDownLatch(2);
+
+        //Thread acquires permit, countDown acquireSignal, wait for releaseStartSignal release semaphore
+        Runnable releasingRunnable = () -> {
+            try {
+                sem.acquire();
+                acquireDoneSignal.countDown();
+                releaseStartSignal.await(1, TimeUnit.SECONDS);
+                sem.release();
+                releaseStopSignal.countDown();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        };
+
+        //Start two threads that acquires semaphore
+        new Thread(releasingRunnable).start();
+        new Thread(releasingRunnable).start();
+
+        //Wait for threads to countdown
+        acquireDoneSignal.await(1, TimeUnit.SECONDS);
+
+        //Assert that after both threads acquiring semaphore there is no available permits
+        assertFalse(sem.tryAcquire());
+
+        //Start releasing for threads
+        releaseStartSignal.countDown();
+
+        //Waiting for all threads to release
+        releaseStopSignal.await(1, TimeUnit.SECONDS);
+
+        //Assert that there are only two available permits after all threads release();
+        assertTrue(sem.tryAcquire());
+        assertTrue(sem.tryAcquire());
+        assertFalse(sem.tryAcquire());
     }
 
 }
